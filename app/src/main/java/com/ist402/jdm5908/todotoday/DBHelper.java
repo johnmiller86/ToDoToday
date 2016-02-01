@@ -2,8 +2,11 @@ package com.ist402.jdm5908.todotoday;
 
 import android.content.ContentValues;
 import android.content.Context;
+import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+
+import java.util.ArrayList;
 
 public class DBHelper extends SQLiteOpenHelper {
 
@@ -25,7 +28,10 @@ public class DBHelper extends SQLiteOpenHelper {
 
     @Override
     public void onCreate(SQLiteDatabase database) {
-        String sqlStatement = "CREATE TABLE " + DATABASE_TABLE + "(" + KEY_TASK_ID + " INTEGER PRIMARY KEY, " + KEY_DESCRIPTION + " TEXT, " + KEY_IS_DONE + " INTEGER" + ")";
+        String sqlStatement = "CREATE TABLE " + DATABASE_TABLE + "("
+                + KEY_TASK_ID + " INTEGER PRIMARY KEY, "
+                + KEY_DESCRIPTION + " TEXT, "
+                + KEY_IS_DONE + " INTEGER" + ")";
         database.execSQL(sqlStatement);
         taskCount = 0;
     }
@@ -37,8 +43,7 @@ public class DBHelper extends SQLiteOpenHelper {
     }
 
     //************** Database operations: ADD, EDIT, DELETE
-
-    // Add a ToDO task to the database
+    // Add a task to the database
     public void addToDoItem(ToDo_Item task) {
         SQLiteDatabase db = this.getWritableDatabase();
         ContentValues values = new ContentValues();
@@ -60,5 +65,78 @@ public class DBHelper extends SQLiteOpenHelper {
         db.close();
     }
 
+    // Edit a task in the database
+    public void editTaskItem(ToDo_Item task) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues values = new ContentValues();
 
+        values.put(KEY_DESCRIPTION, task.getDescription());
+        values.put(KEY_IS_DONE, task.getIs_done());
+
+        db.update(DATABASE_TABLE, values, KEY_TASK_ID + " = ? ",
+                new String[]{
+                        String.valueOf(task.get_id())
+                });
+        db.close();
+    }
+
+    // Return a secific task in the database
+    public ToDo_Item getToDo_Task(int id) {
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor cursor = db.query(
+                DATABASE_TABLE,
+                new String[]{KEY_TASK_ID, KEY_DESCRIPTION, KEY_IS_DONE},
+                KEY_TASK_ID + "=?",
+                new String[]{String.valueOf(id)},
+                null, null, null, null);
+
+        if (cursor != null)
+            cursor.moveToFirst();
+
+        ToDo_Item task = new ToDo_Item(
+                cursor.getInt(0),
+                cursor.getString(1),
+                cursor.getInt(2));
+        db.close();
+        return task;
+    }
+
+    // Delete a specific task from the database
+    public void deleteTaskItem(ToDo_Item task) {
+        SQLiteDatabase database = this.getReadableDatabase();
+
+        // Delete the table row
+        database.delete(DATABASE_TABLE, KEY_TASK_ID + " = ?",
+                new String[]
+                        {String.valueOf(task.get_id())});
+        database.close();
+    }
+
+    public int getTaskCount() {
+        return taskCount;
+    }
+
+    // Add a task to the database
+    public ArrayList<ToDo_Item> getAllTaskItems() {
+        ArrayList<ToDo_Item> taskList = new ArrayList<>();
+        String queryList = "SELECT * FROM " + DATABASE_TABLE;
+
+        SQLiteDatabase database = this.getReadableDatabase();
+        Cursor cursor = database.rawQuery(queryList, null);
+
+        // Collect each row in the table
+        if (cursor.moveToFirst()) {
+            do {
+                ToDo_Item task = new ToDo_Item();
+                task.set_id(cursor.getInt(0));
+                task.setDescription(cursor.getString(1));
+                task.setIs_done(cursor.getInt(2));
+
+                // Add to the query list
+                taskList.add(task);
+            }
+            while (cursor.moveToNext());
+        }
+        return taskList;
+    }
 }
